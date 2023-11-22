@@ -396,3 +396,9 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# Project files
+backup-test-files/
+**/settings/contacts.json
+**/settings/secrets.env
+**/settings/upload.json

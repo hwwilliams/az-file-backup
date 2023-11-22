@@ -1,0 +1,6 @@
+{
+  "directory_path": "<directory path>",
+  "storage_account_name": "<account name>",
+  "storage_container_name": "<container name>",
+  "storage_url": "blob.core.windows.net"
+}

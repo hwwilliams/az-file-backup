@@ -1,0 +1,11 @@
+[Unit]
+Description=Backup files to Azure Blob Storage with notification via Twilio - Send an SMS message when file upload fails
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=<repo content directory>/az-file-backup/venv/bin/python3 <repo content directory>/az-file-backup/az-file-backup.py
+EnvironmentFile=<repo content directory>/az-file-backup/settings/secrets.env
+Restart=always
