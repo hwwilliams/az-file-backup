@@ -9,6 +9,10 @@ from azure.storage.blob import BlobServiceClient, ContainerClient
 logger = logging.getLogger(__name__)
 
 
+def format_log_message(self, message: str):
+    return f"{self.storage_account_name}/{self.storage_container_name} - {message}"
+
+
 def get_upload_settings():
     upload_settings_file_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "settings", "upload.json")
@@ -60,12 +64,12 @@ def get_file_md5(file_path: str):
     return file_hash.hexdigest()
 
 
-def get_local_files(directory_path: str):
-    local_files = []
+def get_files_to_upload(directory_path: str):
+    files = []
     for file_name in os.listdir(directory_path):
         file_path = os.path.join(directory_path, file_name)
         if os.path.isfile(file_path):
-            local_files.append(
+            files.append(
                 {
                     "name": file_name,
                     "path": file_path,
@@ -73,7 +77,7 @@ def get_local_files(directory_path: str):
                 }
             )
 
-    return local_files
+    return files
 
 
 def get_blobs(container_client: ContainerClient):
@@ -94,9 +98,7 @@ def get_blobs(container_client: ContainerClient):
 
 
 def upload_blob(self, file: object, container_client: ContainerClient):
-    logger.info(
-        f"{self.storage_account_name}/{self.storage_container_name} - Uploading blob '{file['name']}'"
-    )
+    logger.info(format_log_message(self, f"Uploading blob '{file['name']}'"))
     with open(file=file["path"], mode="rb") as data:
         container_client.upload_blob(name=file["name"], data=data, overwrite=True)
 
@@ -106,12 +108,18 @@ def compare_file_blob_hash(self, file: str, blobs: list):
         if file["name"] == blob["name"]:
             if file["md5_hash"] == blob["md5_hash"]:
                 logger.info(
-                    f"{self.storage_account_name}/{self.storage_container_name} - File '{file['name']}' already exists as a blob, skipping upload"
+                    format_log_message(
+                        self,
+                        f"File '{file['name']}' already exists as a blob, skipping upload",
+                    )
                 )
                 return True
             else:
                 logger.info(
-                    f"{self.storage_account_name}/{self.storage_container_name} - File '{file['name']}' already exists as a blob but content differs"
+                    format_log_message(
+                        self,
+                        f"File '{file['name']}' already exists as a blob but content differs",
+                    )
                 )
                 return False
 
@@ -145,8 +153,8 @@ class Process:
             )
 
             blob_names, blobs = get_blobs(container_client)
-            local_files = get_local_files(self.directory_path)
-            for file in local_files:
+            files = get_files_to_upload(self.directory_path)
+            for file in files:
                 if file["name"] in blob_names:
                     if not compare_file_blob_hash(self, file, blobs):
                         upload_blob(file, container_client)
