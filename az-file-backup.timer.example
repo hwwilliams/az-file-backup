@@ -1,0 +1,10 @@
+[Unit]
+Description=Run az-file-backup service
+After=network-online.target
+
+[Timer]
+Unit=az-file-backup.service
+OnCalendar=*-*-* 06:00:00
+
+[Install]
+WantedBy=timers.target
