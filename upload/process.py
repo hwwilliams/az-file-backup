@@ -55,13 +55,21 @@ def get_upload_settings():
         )
 
 
-def get_files_to_upload(directory_path: str):
+def get_files_to_upload(self):
     try:
         files = []
-        for file_name in os.listdir(directory_path):
-            file_path = os.path.join(directory_path, file_name)
+        for file_name in os.listdir(self.directory_path):
+            file_path = os.path.join(self.directory_path, file_name)
             if os.path.isfile(file_path):
-                files.append({"name": file_name, "path": file_path})
+                if os.stat(file_path).st_size < 10000000000:
+                    files.append({"name": file_name, "path": file_path})
+                else:
+                    logger.warning(
+                        format_log_message(
+                            self,
+                            f"File '{file_name}' is larger than 10GB, skipping upload",
+                        )
+                    )
 
         return files
 
@@ -113,7 +121,7 @@ class Process:
                 container=self.storage_container_name
             )
 
-            files = get_files_to_upload(self.directory_path)
+            files = get_files_to_upload(self)
             logger.info(
                 format_log_message(self, f"Found {len(files)} blobs to upload'")
             )
