@@ -1,5 +1,5 @@
 [Unit]
-Description=Backup files to Azure Blob Storage with notification
+Description=Backup files to Azure Blob Storage
 
 [Service]
 Type=simple
