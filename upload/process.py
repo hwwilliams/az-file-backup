@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
-import binascii, hashlib, json, logging, os
+import json, logging, os
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient, ContainerClient
+from azure.core.exceptions import ResourceExistsError
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def format_log_message(self, message: str):
@@ -53,38 +55,13 @@ def get_upload_settings():
         )
 
 
-def get_file_md5(file_path: str):
-    try:
-        with open(file_path, "rb") as f:
-            file_hash = hashlib.md5()
-            chunk = f.read(8192)
-            while chunk:
-                file_hash.update(chunk)
-                chunk = f.read(8192)
-
-        return file_hash.hexdigest()
-
-    except FileNotFoundError:
-        logger.error(f"File not found '{file_path}'")
-        raise
-
-    except Exception as e:
-        logger.error(e)
-
-
 def get_files_to_upload(directory_path: str):
     try:
         files = []
         for file_name in os.listdir(directory_path):
             file_path = os.path.join(directory_path, file_name)
             if os.path.isfile(file_path):
-                files.append(
-                    {
-                        "name": file_name,
-                        "path": file_path,
-                        "md5_hash": get_file_md5(file_path),
-                    }
-                )
+                files.append({"name": file_name, "path": file_path})
 
         return files
 
@@ -92,62 +69,25 @@ def get_files_to_upload(directory_path: str):
         logger.error(e)
 
 
-def get_blobs(container_client: ContainerClient):
-    try:
-        blob_names = []
-        blobs = []
-        for blob in container_client.list_blobs():
-            blob_names.append(blob.name)
-            blob_md5_hash_encoded = bytearray(blob.content_settings.content_md5)
-            blob_md5_hash_decoded = binascii.hexlify(blob_md5_hash_encoded).decode(
-                "utf-8"
-            )
-            blobs.append(
-                {
-                    "name": blob.name,
-                    "md5_hash": blob_md5_hash_decoded,
-                }
-            )
-
-        return blob_names, blobs
-
-    except Exception as e:
-        logger.error(e)
-
-
 def upload_blob(self, file: object, container_client: ContainerClient):
     try:
-        logger.info(format_log_message(self, f"Uploading blob '{file['name']}'"))
         with open(file=file["path"], mode="rb") as data:
-            container_client.upload_blob(name=file["name"], data=data, overwrite=True)
+            container_client.upload_blob(name=file["name"], data=data, overwrite=False)
+
+    except ResourceExistsError as e:
+        logger.info(
+            format_log_message(
+                self, f"Blob '{file['name']}' already exists, skipping upload"
+            )
+        )
 
     except Exception as e:
         logger.error(e)
 
-
-def compare_file_blob_hash(self, file: str, blobs: list):
-    try:
-        for blob in blobs:
-            if file["name"] == blob["name"]:
-                if file["md5_hash"] == blob["md5_hash"]:
-                    logger.info(
-                        format_log_message(
-                            self,
-                            f"File '{file['name']}' already exists as a blob, skipping upload",
-                        )
-                    )
-                    return True
-                else:
-                    logger.info(
-                        format_log_message(
-                            self,
-                            f"File '{file['name']}' already exists as a blob but content differs",
-                        )
-                    )
-                    return False
-
-    except Exception as e:
-        logger.error(e)
+    else:
+        logger.info(
+            format_log_message(self, f"Successfully uploaded blob '{file['name']}'")
+        )
 
 
 class Process:
@@ -173,14 +113,12 @@ class Process:
                 container=self.storage_container_name
             )
 
-            blob_names, blobs = get_blobs(container_client)
             files = get_files_to_upload(self.directory_path)
+            logger.info(
+                format_log_message(self, f"Found {len(files)} blobs to upload'")
+            )
             for file in files:
-                if file["name"] in blob_names:
-                    if not compare_file_blob_hash(self, file, blobs):
-                        upload_blob(self, file, container_client)
-                else:
-                    upload_blob(self, file, container_client)
+                upload_blob(self, file, container_client)
 
         except Exception as e:
             logger.error(e)
