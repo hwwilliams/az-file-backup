@@ -13,11 +13,23 @@ def configure_logging():
     journald_handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
     logger.addHandler(journald_handler)
 
-    twilio_http_client_logger = logging.getLogger("twilio.http_client")
-    twilio_http_client_logger.setLevel(logging.WARNING)
+    twilio_logger = logging.getLogger("twilio.http_client")
+    twilio_logger.setLevel(logging.WARNING)
 
-    urllib3_connectionpool_logger = logging.getLogger("urllib3.connectionpool")
-    urllib3_connectionpool_logger.setLevel(logging.WARNING)
+    urllib3_logger = logging.getLogger("urllib3.connectionpool")
+    urllib3_logger.setLevel(logging.WARNING)
+
+    azure_logger = logging.getLogger("azure.identity._credentials.environment")
+    azure_logger.setLevel(logging.WARNING)
+
+    azure_logger = logging.getLogger("azure.identity._credentials.managed_identity")
+    azure_logger.setLevel(logging.WARNING)
+
+    azure_logger = logging.getLogger("azure.identity._credentials.chained")
+    azure_logger.setLevel(logging.WARNING)
+
+    azure_logger = logging.getLogger("azure.core.pipeline.policies.http_logging_policy")
+    azure_logger.setLevel(logging.WARNING)
 
 
 def upload():

@@ -2,7 +2,7 @@ import os, binascii, hashlib
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient, ContainerClient
 
-PLEX_BACKUP_DIRECTORY_PATH = "./plex-backups"
+PLEX_BACKUP_DIRECTORY_PATH = "./backup-test-files"
 STORAGE_ACCOUNT_NAME = "peastusbackup1"
 STORAGE_CONTAINER_NAME = "plex-db"
 
