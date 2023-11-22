@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import logging
-
 from systemd import journal
 from upload.process import Process
 
