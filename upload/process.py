@@ -178,9 +178,9 @@ class Process:
             for file in files:
                 if file["name"] in blob_names:
                     if not compare_file_blob_hash(self, file, blobs):
-                        upload_blob(file, container_client)
+                        upload_blob(self, file, container_client)
                 else:
-                    upload_blob(file, container_client)
+                    upload_blob(self, file, container_client)
 
         except Exception as e:
             logger.error(e)
