@@ -399,6 +399,7 @@ FodyWeavers.xsd
 
 # Project files
 backup-test-files/
+venv/
 **/settings/contacts.json
 **/settings/secrets.env
 **/settings/upload.json
