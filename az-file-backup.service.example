@@ -1,5 +1,5 @@
 [Unit]
-Description=Backup files to Azure Blob Storage with notification via Twilio - Send an SMS message when file upload fails
+Description=Backup files to Azure Blob Storage with notification
 
 [Install]
 WantedBy=multi-user.target

@@ -4,8 +4,6 @@ import binascii, hashlib, json, logging, os
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient, ContainerClient
 
-# from twilio_notifications.messenger import TwilioNotification
-
 logger = logging.getLogger(__name__)
 
 
@@ -19,7 +17,7 @@ def get_upload_settings():
     )
 
     logger.debug(
-        f"Attempting to load upload settings from file '{upload_settings_file_path}'"
+        f"Attempting to load upload settings file '{upload_settings_file_path}'"
     )
 
     try:
@@ -28,12 +26,12 @@ def get_upload_settings():
 
     except json.JSONDecodeError:
         logger.error(
-            f"No valid JSON data found when attempting to load log file path from: '{upload_settings_file_path}'"
+            f"No valid JSON data found when attempting to load upload settings file '{upload_settings_file_path}'"
         )
         raise
 
     except FileNotFoundError:
-        logger.error(f"Log file not found: '{upload_settings_file_path}'")
+        logger.error(f"Upload settings file not found '{upload_settings_file_path}'")
         raise
 
     upload_settings_keys = [
@@ -56,77 +54,98 @@ def get_upload_settings():
 
 
 def get_file_md5(file_path: str):
-    with open(file_path, "rb") as f:
-        file_hash = hashlib.md5()
-        while chunk := f.read(8192):
-            file_hash.update(chunk)
+    try:
+        with open(file_path, "rb") as f:
+            file_hash = hashlib.md5()
+            while chunk := f.read(8192):
+                file_hash.update(chunk)
 
-    return file_hash.hexdigest()
+        return file_hash.hexdigest()
+
+    except FileNotFoundError:
+        logger.error(f"File not found '{file_path}'")
+        raise
+
+    except Exception as e:
+        logger.error(e)
 
 
 def get_files_to_upload(directory_path: str):
-    files = []
-    for file_name in os.listdir(directory_path):
-        file_path = os.path.join(directory_path, file_name)
-        if os.path.isfile(file_path):
-            files.append(
-                {
-                    "name": file_name,
-                    "path": file_path,
-                    "md5_hash": get_file_md5(file_path),
-                }
-            )
+    try:
+        files = []
+        for file_name in os.listdir(directory_path):
+            file_path = os.path.join(directory_path, file_name)
+            if os.path.isfile(file_path):
+                files.append(
+                    {
+                        "name": file_name,
+                        "path": file_path,
+                        "md5_hash": get_file_md5(file_path),
+                    }
+                )
 
-    return files
+        return files
+
+    except Exception as e:
+        logger.error(e)
 
 
 def get_blobs(container_client: ContainerClient):
-    blob_names = []
-    blobs = []
-    for blob in container_client.list_blobs():
-        blob_names.append(blob.name)
-        blob_md5_hash_encoded = bytearray(blob.content_settings.content_md5)
-        blob_md5_hash_decoded = binascii.hexlify(blob_md5_hash_encoded).decode("utf-8")
-        blobs.append(
-            {
-                "name": blob.name,
-                "md5_hash": blob_md5_hash_decoded,
-            }
-        )
+    try:
+        blob_names = []
+        blobs = []
+        for blob in container_client.list_blobs():
+            blob_names.append(blob.name)
+            blob_md5_hash_encoded = bytearray(blob.content_settings.content_md5)
+            blob_md5_hash_decoded = binascii.hexlify(blob_md5_hash_encoded).decode(
+                "utf-8"
+            )
+            blobs.append(
+                {
+                    "name": blob.name,
+                    "md5_hash": blob_md5_hash_decoded,
+                }
+            )
 
-    return blob_names, blobs
+        return blob_names, blobs
+
+    except Exception as e:
+        logger.error(e)
 
 
 def upload_blob(self, file: object, container_client: ContainerClient):
-    logger.info(format_log_message(self, f"Uploading blob '{file['name']}'"))
-    with open(file=file["path"], mode="rb") as data:
-        container_client.upload_blob(name=file["name"], data=data, overwrite=True)
+    try:
+        logger.info(format_log_message(self, f"Uploading blob '{file['name']}'"))
+        with open(file=file["path"], mode="rb") as data:
+            container_client.upload_blob(name=file["name"], data=data, overwrite=True)
+
+    except Exception as e:
+        logger.error(e)
 
 
 def compare_file_blob_hash(self, file: str, blobs: list):
-    for blob in blobs:
-        if file["name"] == blob["name"]:
-            if file["md5_hash"] == blob["md5_hash"]:
-                logger.info(
-                    format_log_message(
-                        self,
-                        f"File '{file['name']}' already exists as a blob, skipping upload",
+    try:
+        for blob in blobs:
+            if file["name"] == blob["name"]:
+                if file["md5_hash"] == blob["md5_hash"]:
+                    logger.info(
+                        format_log_message(
+                            self,
+                            f"File '{file['name']}' already exists as a blob, skipping upload",
+                        )
                     )
-                )
-                return True
-            else:
-                logger.info(
-                    format_log_message(
-                        self,
-                        f"File '{file['name']}' already exists as a blob but content differs",
+                    return True
+                else:
+                    logger.info(
+                        format_log_message(
+                            self,
+                            f"File '{file['name']}' already exists as a blob but content differs",
+                        )
                     )
-                )
-                return False
+                    return False
 
-
-# def twilio_notification(message_to_send):
-#     client = TwilioNotification()
-#     client.process_messasge(message_to_send)
+    except Exception as e:
+        logger.error(e)
 
 
 class Process:

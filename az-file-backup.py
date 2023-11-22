@@ -13,9 +13,6 @@ def configure_logging():
     journald_handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
     logger.addHandler(journald_handler)
 
-    twilio_logger = logging.getLogger("twilio.http_client")
-    twilio_logger.setLevel(logging.WARNING)
-
     urllib3_logger = logging.getLogger("urllib3.connectionpool")
     urllib3_logger.setLevel(logging.WARNING)
 
