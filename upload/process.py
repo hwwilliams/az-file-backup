@@ -2,8 +2,7 @@
 
 import json, logging, os
 from azure.identity import DefaultAzureCredential
-from azure.storage.blob import BlobServiceClient, ContainerClient
-from azure.core.exceptions import ResourceExistsError
+from azure.storage.blob import BlobServiceClient, BlobClient
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -77,25 +76,21 @@ def get_files_to_upload(self):
         logger.error(e)
 
 
-def upload_blob(self, file: object, container_client: ContainerClient):
+def upload_blob(self, file: object, blob_client: BlobClient):
     try:
-        with open(file=file["path"], mode="rb") as data:
-            container_client.upload_blob(name=file["name"], data=data, overwrite=False)
-
-    except ResourceExistsError as e:
-        logger.info(
-            format_log_message(
-                self, f"Blob '{file['name']}' already exists, skipping upload"
+        if blob_client.exists():
+            logger.info(
+                format_log_message(
+                    self, f"Blob '{file['name']}' already exists, skipping upload"
+                )
             )
-        )
+        else:
+            logger.info(format_log_message(self, f"Uploading blob '{file['name']}'"))
+            with open(file=file["path"], mode="rb") as data:
+                blob_client.upload_blob(data)
 
     except Exception as e:
         logger.error(e)
-
-    else:
-        logger.info(
-            format_log_message(self, f"Successfully uploaded blob '{file['name']}'")
-        )
 
 
 class Process:
@@ -117,16 +112,15 @@ class Process:
                 storage_account_url, credential=DefaultAzureCredential()
             )
 
-            container_client = blob_service_client.get_container_client(
-                container=self.storage_container_name
-            )
-
             files = get_files_to_upload(self)
             logger.info(
                 format_log_message(self, f"Found {len(files)} blobs to upload'")
             )
             for file in files:
-                upload_blob(self, file, container_client)
+                blob_client = blob_service_client.get_blob_client(
+                    container=self.storage_container_name, blob=file["name"]
+                )
+                upload_blob(self, file, blob_client)
 
         except Exception as e:
             logger.error(e)
