@@ -1,5 +1,6 @@
 {
   "directory_path": "<directory path>",
+  "health_check_url": "<health check url>",
   "storage_account_name": "<account name>",
   "storage_container_name": "<container name>",
   "storage_url_suffix": "blob.core.windows.net"
