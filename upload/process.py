@@ -117,7 +117,7 @@ class Process:
     def upload(self):
         try:
             storage_account_url = (
-                f"httpsd://{self.storage_account_name}.{self.storage_url_suffix}"
+                f"https://{self.storage_account_name}.{self.storage_url_suffix}"
             )
             blob_service_client = BlobServiceClient(
                 storage_account_url, credential=DefaultAzureCredential()
