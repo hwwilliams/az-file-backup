@@ -12,11 +12,8 @@ def format_log_message(self, message: str):
     return f"{self.storage_account_name}/{self.storage_container_name} - {message}"
 
 
-def health_check(request_url: str, data=None, failure=False):
+def health_check(request_url: str, data=None):
     try:
-        if failure:
-            request_url = request_url + "/fail"
-
         if data:
             requests.post(request_url, data=data)
         else:
@@ -134,7 +131,7 @@ class Process:
                 upload_blob(self, file, blob_client)
 
         except Exception as e:
-            health_check(self.health_check_url, str(e), failure=True)
+            health_check(self.health_check_url + "/fail", str(e))
             logger.error(e)
 
         else:
