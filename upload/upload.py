@@ -86,6 +86,7 @@ def get_file_md5(file_path: str):
 
     except Exception as e:
         logger.error(e)
+        raise
 
     else:
         return file_hash.digest()
@@ -183,6 +184,7 @@ class Upload:
         except Exception as e:
             health_check(self.health_check_url + "/fail", str(e))
             logger.error(e)
+            raise
 
         else:
             health_check(self.health_check_url)
