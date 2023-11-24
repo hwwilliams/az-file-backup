@@ -2,7 +2,9 @@
 
 import json, logging, os, requests
 from azure.identity import DefaultAzureCredential
-from azure.storage.blob import BlobServiceClient, BlobClient
+from azure.storage.blob import BlobServiceClient, BlobClient, ContentSettings
+from hashlib import md5
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -68,13 +70,40 @@ def get_upload_settings():
             )
 
 
+def get_file_md5(file_path: str):
+    try:
+        with open(file_path, "rb") as f:
+            file_hash = md5()
+            chunk = f.read(8192)
+
+            while chunk:
+                file_hash.update(chunk)
+                chunk = f.read(8192)
+
+    except FileNotFoundError:
+        logger.error(f"File not found '{file_path}'")
+        raise
+
+    except Exception as e:
+        logger.error(e)
+
+    else:
+        return file_hash.digest()
+
+
 def get_files_to_upload(self):
     files = []
     for file_name in os.listdir(self.directory_path):
         file_path = os.path.join(self.directory_path, file_name)
         if os.path.isfile(file_path):
             if os.stat(file_path).st_size < 10000000000:
-                files.append({"name": file_name, "path": file_path})
+                files.append(
+                    {
+                        "name": file_name,
+                        "path": file_path,
+                        "md5_digest": get_file_md5(file_path),
+                    }
+                )
             else:
                 logger.warning(
                     format_log_message(
@@ -86,18 +115,35 @@ def get_files_to_upload(self):
     return files
 
 
-def upload_blob(self, file: object, blob_client: BlobClient):
-    if blob_client.exists():
+def compare_file_blob_md5(self, file: object, blob_client: BlobClient):
+    blob_properties = blob_client.get_blob_properties()
+    blob_md5_digest = blob_properties.content_settings.content_md5
+    if file["md5_digest"] == blob_md5_digest:
         logger.info(
             format_log_message(
-                self, f"Blob '{file['name']}' already exists, skipping upload"
+                self,
+                f"Blob '{file['name']}' already exists, skipping upload",
             )
         )
-
+        return True
     else:
-        logger.info(format_log_message(self, f"Uploading blob '{file['name']}'"))
-        with open(file=file["path"], mode="rb") as data:
-            blob_client.upload_blob(data)
+        logger.info(
+            format_log_message(
+                self,
+                f"Blob '{file['name']}' already exists but file content is different, overwriting blob",
+            )
+        )
+        return False
+
+
+def upload_blob(self, file: object, blob_client: BlobClient):
+    logger.info(format_log_message(self, f"Uploading blob '{file['name']}'"))
+    with open(file=file["path"], mode="rb") as data:
+        blob_client.upload_blob(
+            data,
+            content_settings=ContentSettings(content_md5=file["md5_digest"]),
+            overwrite=True,
+        )
 
 
 class Upload:
@@ -128,7 +174,11 @@ class Upload:
                 blob_client = blob_service_client.get_blob_client(
                     container=self.storage_container_name, blob=file["name"]
                 )
-                upload_blob(self, file, blob_client)
+                if blob_client.exists():
+                    if not compare_file_blob_md5(self, file, blob_client):
+                        upload_blob(self, file, blob_client)
+                else:
+                    upload_blob(self, file, blob_client)
 
         except Exception as e:
             health_check(self.health_check_url + "/fail", str(e))
