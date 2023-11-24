@@ -100,7 +100,7 @@ def upload_blob(self, file: object, blob_client: BlobClient):
             blob_client.upload_blob(data)
 
 
-class Process:
+class Upload:
     def __init__(self):
         logger.info(f"Attempting to get upload settings")
 
@@ -111,7 +111,7 @@ class Process:
         self.storage_container_name = upload_settings["storage_container_name"]
         self.storage_url_suffix = upload_settings["storage_url_suffix"]
 
-    def upload(self):
+    def upload_blob(self):
         try:
             storage_account_url = (
                 f"https://{self.storage_account_name}.{self.storage_url_suffix}"

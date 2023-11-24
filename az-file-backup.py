@@ -2,7 +2,7 @@
 
 import logging
 from systemd import journal
-from upload.process import Process
+from upload.upload import Upload
 
 
 def configure_logging():
@@ -14,8 +14,8 @@ def configure_logging():
 
 
 def upload():
-    process = Process()
-    process.upload()
+    upload = Upload()
+    upload.upload_blob()
 
 
 def main():
