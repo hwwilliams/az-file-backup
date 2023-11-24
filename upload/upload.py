@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
-import json, logging, os, requests
+import json
+import logging
+import os
+import requests
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient, BlobClient, ContentSettings
 from hashlib import md5
@@ -20,7 +23,6 @@ def health_check(request_url: str, data=None):
             requests.post(request_url, data=data)
         else:
             requests.post(request_url)
-
     except requests.RequestException as e:
         logger.error(f"Health check ping failed {str(e)}")
         raise
@@ -30,25 +32,20 @@ def get_upload_settings():
     upload_settings_file_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "settings", "upload.json")
     )
-
     logger.debug(
         f"Attempting to load upload settings file '{upload_settings_file_path}'"
     )
-
     try:
         with open(upload_settings_file_path, "r") as file:
             upload_settings_dict = json.load(file)
-
     except json.JSONDecodeError:
         logger.error(
             f"No valid JSON data found when attempting to load upload settings file '{upload_settings_file_path}'"
         )
         raise
-
     except FileNotFoundError:
         logger.error(f"Upload settings file not found '{upload_settings_file_path}'")
         raise
-
     else:
         upload_settings_keys = [
             "directory_path",
@@ -61,9 +58,7 @@ def get_upload_settings():
             logger.debug(
                 f"Successfully loaded upload settings from file '{upload_settings_file_path}'"
             )
-
             return upload_settings_dict
-
         else:
             logger.error(
                 f"Missing upload settings key from file '{upload_settings_file_path}', expected keys '{upload_settings_keys}'"
@@ -75,19 +70,15 @@ def get_file_md5(file_path: str):
         with open(file_path, "rb") as f:
             file_hash = md5()
             chunk = f.read(8192)
-
             while chunk:
                 file_hash.update(chunk)
                 chunk = f.read(8192)
-
     except FileNotFoundError:
         logger.error(f"File not found '{file_path}'")
         raise
-
     except Exception as e:
         logger.error(e)
         raise
-
     else:
         return file_hash.digest()
 
@@ -112,7 +103,6 @@ def get_files_to_upload(self):
                         f"File '{file_name}' is larger than 10GB, skipping upload",
                     )
                 )
-
     return files
 
 
@@ -150,7 +140,6 @@ def upload_blob(self, file: object, blob_client: BlobClient):
 class Upload:
     def __init__(self):
         logger.info(f"Attempting to get upload settings")
-
         upload_settings = get_upload_settings()
         self.directory_path = upload_settings["directory_path"]
         self.health_check_url = upload_settings["health_check_url"]
@@ -166,7 +155,6 @@ class Upload:
             blob_service_client = BlobServiceClient(
                 storage_account_url, credential=DefaultAzureCredential()
             )
-
             files = get_files_to_upload(self)
             logger.info(
                 format_log_message(self, f"Found {len(files)} blobs to upload'")
@@ -180,11 +168,9 @@ class Upload:
                         upload_blob(self, file, blob_client)
                 else:
                     upload_blob(self, file, blob_client)
-
         except Exception as e:
             health_check(self.health_check_url + "/fail", str(e))
             logger.error(e)
             raise
-
         else:
             health_check(self.health_check_url)
