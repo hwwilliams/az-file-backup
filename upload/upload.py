@@ -9,10 +9,8 @@ from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient, BlobClient, ContentSettings
 from hashlib import md5
 
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
 
 settings_schema = {
     "description": "",
@@ -175,7 +173,7 @@ def upload_blob(file: object, blob_client: BlobClient):
 
 
 class Upload:
-    def __init__(self):
+    def __init__(self) -> None:
         self.upload_definition_settings = get_upload_definition_settings()
 
     def upload_blob(self):
