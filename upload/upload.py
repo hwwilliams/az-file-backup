@@ -185,6 +185,9 @@ class Upload:
             storage_url_suffix = upload_definition["storage_url_suffix"]
 
             try:
+                logger.info(
+                    f"Connecting to storage account '{storage_account_name}' and storage container '{storage_container_name}'"
+                )
                 storage_account_url = (
                     f"https://{storage_account_name}.{storage_url_suffix}"
                 )
