@@ -23,7 +23,7 @@ class UploadDefinition(BaseModel):
     storage_url_suffix: str
 
 
-class UploadDefinitions(BaseModel):
+class UploadDefinitionList(BaseModel):
     upload_definitions: List[UploadDefinition] = Field(
         json_schema_extra={
             "minItems": 1,
@@ -49,7 +49,7 @@ def get_upload_definition_settings():
         )
         with open(upload_settings_file_path, "r") as f:
             upload_definition_settings = json.load(f)
-            UploadDefinitions.model_validate(upload_definition_settings)
+            UploadDefinitionList.model_validate(upload_definition_settings)
     except ValidationError:
         logger.error(
             f"Invalid JSON found when attempting to load upload settings file '{upload_settings_file_path}'"
@@ -71,7 +71,7 @@ def get_upload_definition_settings():
 def main():
     configure_logging()
     upload_definition_settings = get_upload_definition_settings()
-    print(json.dumps(UploadDefinitions.model_json_schema(), indent=2))
+    print(json.dumps(UploadDefinitionList.model_json_schema(), indent=2))
 
 
 if __name__ == "__main__":
