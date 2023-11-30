@@ -12,7 +12,6 @@ logger.setLevel(logging.INFO)
 
 
 class UploadDefinition(BaseModel):
-    # model_config = ConfigDict(strict=True)
     health_check_url: str
     paths: List[str] = Field(
         json_schema_extra={
@@ -25,7 +24,6 @@ class UploadDefinition(BaseModel):
 
 
 class UploadDefinitions(BaseModel):
-    # model_config = ConfigDict(strict=True)
     upload_definitions: List[UploadDefinition] = Field(
         json_schema_extra={
             "minItems": 1,
