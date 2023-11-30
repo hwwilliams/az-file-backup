@@ -195,6 +195,7 @@ class Upload:
                     storage_account_url, credential=DefaultAzureCredential()
                 )
 
+                logger.info(f"Getting files to upload")
                 files_to_upload = get_files_to_upload(paths)
                 logger.info(f"Found {len(files_to_upload)} file(s) to upload")
                 for file in files_to_upload:
