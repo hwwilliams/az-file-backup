@@ -65,13 +65,13 @@ def get_upload_definition_settings():
         raise
     else:
         print(upload_definition_settings["upload_definitions"])
+        print(json.dumps(UploadDefinitionList.model_json_schema(), indent=2))
         return upload_definition_settings["upload_definitions"]
 
 
 def main():
     configure_logging()
     upload_definition_settings = get_upload_definition_settings()
-    print(json.dumps(UploadDefinitionList.model_json_schema(), indent=2))
 
 
 if __name__ == "__main__":
