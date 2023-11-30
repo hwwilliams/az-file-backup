@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import json
+import jsonschema
 import logging
 import os
 import requests
@@ -13,8 +14,57 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def format_log_message(self, message: str):
-    return f"{self.storage_account_name}/{self.storage_container_name} - {message}"
+settings_schema = {
+    "description": "",
+    "type": "object",
+    "properties": {
+        "upload_definitions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "$ref": "#/$defs/upload_definition",
+            },
+        },
+    },
+    "$defs": {
+        "upload_definition": {
+            "type": "object",
+            "required": [
+                "health_check_url",
+                "paths",
+                "storage_account_name",
+                "storage_container_name",
+                "storage_url_suffix",
+            ],
+            "properties": {
+                "health_check_url": {
+                    "type": "string",
+                    "description": "",
+                },
+                "paths": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string",
+                    },
+                    "description": "",
+                },
+                "storage_account_name": {
+                    "type": "string",
+                    "description": "",
+                },
+                "storage_container_name": {
+                    "type": "string",
+                    "description": "",
+                },
+                "storage_url_suffix": {
+                    "type": "string",
+                    "description": "",
+                },
+            },
+        }
+    },
+}
 
 
 def health_check(request_url: str, data=None):
@@ -28,41 +78,42 @@ def health_check(request_url: str, data=None):
         raise
 
 
-def get_upload_settings():
-    upload_settings_file_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "settings", "upload.json")
-    )
-    logger.debug(
-        f"Attempting to load upload settings file '{upload_settings_file_path}'"
-    )
+def get_upload_definition_settings():
     try:
-        with open(upload_settings_file_path, "r") as file:
-            upload_settings_dict = json.load(file)
+        upload_settings_file_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "settings", "settings.json")
+        )
+        logger.debug(
+            f"Attempting to load upload settings file '{upload_settings_file_path}'"
+        )
+        with open(upload_settings_file_path, "r") as f:
+            upload_definition_settings = json.load(f)
+            jsonschema.validate(
+                instance=upload_definition_settings, schema=settings_schema
+            )
+    except jsonschema.exceptions.ValidationError:
+        logger.error(
+            f"Invalid JSON found when attempting to load upload settings file '{upload_settings_file_path}'"
+        )
+        raise
     except json.JSONDecodeError:
         logger.error(
-            f"No valid JSON data found when attempting to load upload settings file '{upload_settings_file_path}'"
+            f"No valid JSON found when attempting to load upload settings file '{upload_settings_file_path}'"
         )
         raise
     except FileNotFoundError:
         logger.error(f"Upload settings file not found '{upload_settings_file_path}'")
         raise
     else:
-        upload_settings_keys = [
-            "directory_path",
-            "health_check_url",
-            "storage_account_name",
-            "storage_container_name",
-            "storage_url_suffix",
-        ]
-        if all(entry in upload_settings_dict for entry in upload_settings_keys):
-            logger.debug(
-                f"Successfully loaded upload settings from file '{upload_settings_file_path}'"
-            )
-            return upload_settings_dict
-        else:
-            logger.error(
-                f"Missing upload settings key from file '{upload_settings_file_path}', expected keys '{upload_settings_keys}'"
-            )
+        return upload_definition_settings["upload_definitions"]
+
+
+def is_large_file(file_path: str, file_name: str):
+    if os.stat(file_path).st_size >= 10000000000:
+        logger.warning(f"File '{file_name}' is larger than 10GB, skipping upload")
+        return True
+    else:
+        return False
 
 
 def get_file_md5(file_path: str):
@@ -83,52 +134,38 @@ def get_file_md5(file_path: str):
         return file_hash.digest()
 
 
-def get_files_to_upload(self):
+def get_files_to_upload(paths: list):
     files = []
-    for file_name in os.listdir(self.directory_path):
-        file_path = os.path.join(self.directory_path, file_name)
-        if os.path.isfile(file_path):
-            if os.stat(file_path).st_size < 10000000000:
-                files.append(
-                    {
-                        "name": file_name,
-                        "path": file_path,
-                        "md5_digest": get_file_md5(file_path),
-                    }
-                )
-            else:
-                logger.warning(
-                    format_log_message(
-                        self,
-                        f"File '{file_name}' is larger than 10GB, skipping upload",
+    for path in paths:
+        for root, _, file_names in os.walk(os.path.abspath(path)):
+            for file_name in file_names:
+                file_path = os.path.join(root, file_name)
+                if not is_large_file(file_path, file_name):
+                    files.append(
+                        {
+                            "name": file_name,
+                            "path": file_path,
+                            "md5_digest": get_file_md5(file_path),
+                        }
                     )
-                )
     return files
 
 
-def compare_file_blob_md5(self, file: object, blob_client: BlobClient):
+def diff_file_blob_md5(file: object, blob_client: BlobClient):
     blob_properties = blob_client.get_blob_properties()
     blob_md5_digest = blob_properties.content_settings.content_md5
-    if file["md5_digest"] == blob_md5_digest:
+    if file["md5_digest"] != blob_md5_digest:
         logger.info(
-            format_log_message(
-                self,
-                f"Blob '{file['name']}' already exists, skipping upload",
-            )
+            f"File '{file['name']}' already exists as blob but file content is different, overwriting blob"
         )
         return True
     else:
-        logger.info(
-            format_log_message(
-                self,
-                f"Blob '{file['name']}' already exists but file content is different, overwriting blob",
-            )
-        )
+        logger.info(f"File '{file['name']}' already exists as blob, skipping upload")
         return False
 
 
-def upload_blob(self, file: object, blob_client: BlobClient):
-    logger.info(format_log_message(self, f"Uploading blob '{file['name']}'"))
+def upload_blob(file: object, blob_client: BlobClient):
+    logger.info(f"Uploading blob '{file['name']}'")
     with open(file=file["path"], mode="rb") as data:
         blob_client.upload_blob(
             data,
@@ -139,38 +176,42 @@ def upload_blob(self, file: object, blob_client: BlobClient):
 
 class Upload:
     def __init__(self):
-        logger.info(f"Attempting to get upload settings")
-        upload_settings = get_upload_settings()
-        self.directory_path = upload_settings["directory_path"]
-        self.health_check_url = upload_settings["health_check_url"]
-        self.storage_account_name = upload_settings["storage_account_name"]
-        self.storage_container_name = upload_settings["storage_container_name"]
-        self.storage_url_suffix = upload_settings["storage_url_suffix"]
+        self.upload_definition_settings = get_upload_definition_settings()
 
     def upload_blob(self):
-        try:
-            storage_account_url = (
-                f"https://{self.storage_account_name}.{self.storage_url_suffix}"
-            )
-            blob_service_client = BlobServiceClient(
-                storage_account_url, credential=DefaultAzureCredential()
-            )
-            files = get_files_to_upload(self)
-            logger.info(
-                format_log_message(self, f"Found {len(files)} blobs to upload'")
-            )
-            for file in files:
-                blob_client = blob_service_client.get_blob_client(
-                    container=self.storage_container_name, blob=file["name"]
+        for upload_definition in self.upload_definition_settings:
+            health_check_url = upload_definition["health_check_url"]
+            paths = upload_definition["paths"]
+            storage_account_name = upload_definition["storage_account_name"]
+            storage_container_name = upload_definition["storage_container_name"]
+            storage_url_suffix = upload_definition["storage_url_suffix"]
+
+            try:
+                storage_account_url = (
+                    f"https://{storage_account_name}.{storage_url_suffix}"
                 )
-                if blob_client.exists():
-                    if not compare_file_blob_md5(self, file, blob_client):
-                        upload_blob(self, file, blob_client)
-                else:
-                    upload_blob(self, file, blob_client)
-        except Exception as e:
-            health_check(self.health_check_url + "/fail", str(e))
-            logger.error(e)
-            raise
-        else:
-            health_check(self.health_check_url)
+                blob_service_client = BlobServiceClient(
+                    storage_account_url, credential=DefaultAzureCredential()
+                )
+
+                files_to_upload = get_files_to_upload(paths)
+                logger.info(f"Found {len(files_to_upload)} file(s) to upload")
+                for file in files_to_upload:
+                    blob_client = blob_service_client.get_blob_client(
+                        container=storage_container_name,
+                        blob=file["name"],
+                    )
+
+                    if blob_client.exists():
+                        if diff_file_blob_md5(file, blob_client):
+                            upload_blob(file, blob_client)
+                    else:
+                        upload_blob(file, blob_client)
+
+            except Exception as e:
+                health_check(health_check_url + "/fail", str(e))
+                logger.error(e)
+                raise
+
+            else:
+                health_check(health_check_url)
