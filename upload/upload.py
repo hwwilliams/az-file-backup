@@ -85,7 +85,6 @@ def get_files_to_upload(paths: List[str]):
         for root, _, file_names in os.walk(os.path.abspath(path)):
             for file_name in file_names:
                 file_path = os.path.join(root, file_name)
-                print(file_path)
                 if not is_large_file(file_path, file_name):
                     files.append(
                         {
