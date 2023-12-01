@@ -1,10 +1,9 @@
 import logging
 import json
 import os
-from datetime import date
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 from systemd import journal
-from typing import List, Tuple
+from typing import List
 
 
 logger = logging.getLogger(__name__)
