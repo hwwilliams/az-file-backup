@@ -7,61 +7,11 @@ import requests
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient, BlobClient, ContentSettings
 from hashlib import md5
+from pydantic import BaseModel, Field, ValidationError
+from typing import List
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-settings_schema = {
-    "description": "",
-    "type": "object",
-    "properties": {
-        "upload_definitions": {
-            "type": "array",
-            "minItems": 1,
-            "items": {
-                "$ref": "#/$defs/upload_definition",
-            },
-        },
-    },
-    "$defs": {
-        "upload_definition": {
-            "type": "object",
-            "required": [
-                "health_check_url",
-                "paths",
-                "storage_account_name",
-                "storage_container_name",
-                "storage_url_suffix",
-            ],
-            "properties": {
-                "health_check_url": {
-                    "type": "string",
-                    "description": "",
-                },
-                "paths": {
-                    "type": "array",
-                    "minItems": 1,
-                    "items": {
-                        "type": "string",
-                    },
-                    "description": "",
-                },
-                "storage_account_name": {
-                    "type": "string",
-                    "description": "",
-                },
-                "storage_container_name": {
-                    "type": "string",
-                    "description": "",
-                },
-                "storage_url_suffix": {
-                    "type": "string",
-                    "description": "",
-                },
-            },
-        }
-    },
-}
 
 
 def health_check(request_url: str, data=None):
@@ -85,10 +35,8 @@ def get_upload_definition_settings():
         )
         with open(upload_settings_file_path, "r") as f:
             upload_definition_settings = json.load(f)
-            jsonschema.validate(
-                instance=upload_definition_settings, schema=settings_schema
-            )
-    except jsonschema.exceptions.ValidationError:
+            UploadDefinitionList.model_validate(upload_definition_settings)
+    except ValidationError:
         logger.error(
             f"Invalid JSON found when attempting to load upload settings file '{upload_settings_file_path}'"
         )
@@ -131,12 +79,13 @@ def get_file_md5(file_path: str):
         return file_hash.digest()
 
 
-def get_files_to_upload(paths: list):
+def get_files_to_upload(paths: List[str]):
     files = []
     for path in paths:
         for root, _, file_names in os.walk(os.path.abspath(path)):
             for file_name in file_names:
                 file_path = os.path.join(root, file_name)
+                print(file_path)
                 if not is_large_file(file_path, file_name):
                     files.append(
                         {
@@ -171,6 +120,35 @@ def upload_blob(file: object, blob_client: BlobClient):
         )
 
 
+def check_paths(paths: List[str]):
+    try:
+        if len(paths) != len(set(paths)):
+            raise DuplicateItemInListError(f"Found duplicate paths {paths}")
+        for path in paths:
+            if not os.path.exists(path):
+                raise FileNotFoundError(f"Failed to path '{path}'")
+    except:
+        raise
+    else:
+        return paths
+
+
+class DuplicateItemInListError(Exception):
+    pass
+
+
+class UploadDefinition(BaseModel):
+    health_check_url: str
+    paths: List[str]
+    storage_account_name: str
+    storage_container_name: str
+    storage_url_suffix: str
+
+
+class UploadDefinitionList(BaseModel):
+    upload_definitions: List[UploadDefinition]
+
+
 class Upload:
     def __init__(self) -> None:
         self.upload_definition_settings = get_upload_definition_settings()
@@ -178,7 +156,7 @@ class Upload:
     def upload_blob(self):
         for upload_definition in self.upload_definition_settings:
             health_check_url = upload_definition["health_check_url"]
-            paths = upload_definition["paths"]
+            paths = check_paths(upload_definition["paths"])
             storage_account_name = upload_definition["storage_account_name"]
             storage_container_name = upload_definition["storage_container_name"]
             storage_url_suffix = upload_definition["storage_url_suffix"]
