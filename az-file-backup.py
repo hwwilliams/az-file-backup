@@ -42,6 +42,7 @@ def upload():
                 logger.info(f"Getting files to upload")
                 for root, _, file_names in os.walk(os.path.abspath(path)):
                     logger.info(f"Found {len(file_names)} file(s) to upload")
+
                     for file_name in file_names:
                         blob_file = Blob(
                             blob_service_client,
