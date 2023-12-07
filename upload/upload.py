@@ -110,9 +110,9 @@ class Upload:
                         upload_blob(file, blob_client)
 
             except Exception as e:
-                # health_check(definition.health_check_url + "/fail", str(e))
+                health_check(definition.health_check_url + "/fail", str(e))
                 logger.error(e)
                 raise
 
-            # else:
-            #     health_check(definition.health_check_url)
+            else:
+                health_check(definition.health_check_url)
