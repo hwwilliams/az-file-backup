@@ -4,7 +4,7 @@ import os
 import pathlib
 import json
 import logging
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, ValidationError
 from typing import List
 from hashlib import md5
 
@@ -23,6 +23,9 @@ class File:
 
     def __str__(self) -> str:
         return self.path
+
+    def __eq__(self, other: "File") -> bool:
+        return self.name == other.name and self.get_md5() == other.get_md5()
 
     @property
     def path(self) -> str:
@@ -85,12 +88,16 @@ class Settings:
 
         try:
             with open(settings_file.path, "r") as f:
-                loaded_definitions = json.load(f)
+                loaded_definition = json.load(f)
         except json.JSONDecodeError:
             logger.error(f"File contains invalid JSON '{settings_file.path}'")
             raise
         else:
-            return cls(*loaded_definitions)
+            return cls(*loaded_definition)
+
+    @classmethod
+    def cli(cls):
+        ...
 
     @property
     def upload_definition(self) -> List[UploadDefinition]:
