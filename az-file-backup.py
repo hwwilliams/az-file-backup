@@ -44,24 +44,24 @@ def upload():
                     logger.info(f"Found {len(file_names)} file(s) to upload")
 
                     for file_name in file_names:
-                        blob_file = Blob(
+                        blob = Blob(
                             blob_service_client,
                             os.path.join(root, file_name),
                             file_name,
                         )
 
-                        if blob_file.exists():
-                            if blob_file.content_differs():
+                        if blob.exists():
+                            if blob.content_differs():
                                 logger.info(
-                                    f"File '{blob_file.name}' already exists as blob but file content is different, overwriting blob"
+                                    f"File '{blob.name}' already exists as blob but file content is different, overwriting blob"
                                 )
-                                blob_file.upload()
+                                blob.upload()
                             else:
                                 logger.info(
-                                    f"File '{blob_file.name}' already exists as blob, skipping upload"
+                                    f"File '{blob.name}' already exists as blob, skipping upload"
                                 )
                         else:
-                            blob_file.upload()
+                            blob.upload()
 
         except Exception as e:
             health_check(definition.health_check_url + "/fail", str(e))

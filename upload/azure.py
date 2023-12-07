@@ -55,21 +55,21 @@ class Blob(File):
         self, blob_service_client: AzBlobServiceClient, path: str, name: str = None
     ) -> None:
         super().__init__(path, name)
-        self.blob_service_client = blob_service_client
-        self.blob_client = self.blob_service_client.get_blob_client(blob=self.name)
+        self.service_client = blob_service_client
+        self.client = self.service_client.get_blob_client(blob=self.name)
         self.file_md5 = super().get_md5()
 
     def exists(self) -> bool:
-        return self.blob_client.exists()
+        return self.client.exists()
 
     def content_differs(self) -> bool:
-        blob_md5 = self.blob_client.get_blob_properties().content_settings.content_md5
-        return blob_md5 != self.file_md5
+        blob_properties = self.client.get_blob_properties()
+        return blob_properties.content_settings.content_md5 != self.file_md5
 
     def upload(self) -> None:
         logger.info(f"Uploading blob '{self.name}'")
         with open(file=self.path, mode="rb") as data:
-            self.blob_client.upload_blob(
+            self.client.upload_blob(
                 data,
                 content_settings=ContentSettings(content_md5=self.file_md5),
                 overwrite=True,
