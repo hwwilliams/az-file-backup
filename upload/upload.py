@@ -3,10 +3,11 @@
 import logging
 import os
 import requests
-from azure.identity import DefaultAzureCredential
-from azure.storage.blob import BlobServiceClient, BlobClient, ContentSettings
-from upload.settings import File, Settings
+from azure.storage.blob import BlobClient, ContentSettings
 from typing import List
+from upload.azure import AzBlobServiceClient
+from upload.settings import File, Settings
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -86,22 +87,14 @@ class Upload:
     def upload_blob(self):
         for definition in self.upload_definition:
             try:
-                logger.info(
-                    f"Connecting to storage account '{definition.storage_account_name}' and storage container '{definition.storage_container_name}'"
-                )
-                storage_account_url = f"https://{definition.storage_account_name}.{definition.storage_url_suffix}"
-                blob_service_client = BlobServiceClient(
-                    storage_account_url, credential=DefaultAzureCredential()
-                )
+                blob_service_client = AzBlobServiceClient(definition.cloud.az)
 
                 logger.info(f"Getting files to upload")
                 files_to_upload = get_files_to_upload(check_paths(definition.paths))
                 logger.info(f"Found {len(files_to_upload)} file(s) to upload")
+
                 for file in files_to_upload:
-                    blob_client = blob_service_client.get_blob_client(
-                        container=definition.storage_container_name,
-                        blob=file["name"],
-                    )
+                    blob_client = blob_service_client.get_blob_client(blob=file["name"])
 
                     if blob_client.exists():
                         if diff_file_blob_md5(file, blob_client):

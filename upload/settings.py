@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import os
 import pathlib
 import json
@@ -54,12 +56,20 @@ class File:
         return file_hash.digest()
 
 
-class UploadDefinition(BaseModel):
-    health_check_url: str | None
-    paths: List[str]
+class CloudAzProperties(BaseModel):
     storage_account_name: str
     storage_container_name: str
     storage_url_suffix: str = "blob.core.windows.net"
+
+
+class CloudAz(BaseModel):
+    az: CloudAzProperties
+
+
+class UploadDefinition(BaseModel):
+    health_check_url: str | None
+    paths: List[str]
+    cloud: CloudAz
 
 
 class Settings:
