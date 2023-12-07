@@ -36,7 +36,7 @@ def upload():
             blob_service_client = AzBlobServiceClient(definition.cloud.az)
 
             for path in definition.paths:
-                if not os.path.exists(path):
+                if not os.path.exists(os.path.abspath(path)):
                     raise FileNotFoundError(f"Failed to path '{path}'")
 
                 logger.info(f"Getting files to upload")
