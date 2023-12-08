@@ -21,12 +21,6 @@ class File:
         self.path = path
         self.name = name
 
-    def __str__(self) -> str:
-        return self.path
-
-    def __eq__(self, other: "File") -> bool:
-        return self.name == other.name and self.get_md5() == other.get_md5()
-
     @property
     def path(self) -> str:
         return self._path
