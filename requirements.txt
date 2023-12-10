@@ -1,4 +1,4 @@
 azure-identity
 azure-storage-blob
-jsonschema
+pydantic
 systemd-python

@@ -1,13 +1,15 @@
-{
-  "upload_definitions": [
-    {
-      "health_check_url": "<health check url>",
-      "paths": [
-        "<directory or file path>"
-      ],
-      "storage_account_name": "<account name>",
-      "storage_container_name": "<container name>",
-      "storage_url_suffix": "blob.core.windows.net"
+[
+  {
+    "health_check_url": "<health check url>",
+    "paths": [
+      "<directory or file path>"
+    ],
+    "cloud": {
+      "az": {
+        "storage_account_name": "<account name>",
+        "storage_container_name": "<container name>",
+        "storage_url_suffix": "blob.core.windows.net"
+      }
     }
-  ]
-}
+  }
+]
