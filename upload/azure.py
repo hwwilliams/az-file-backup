@@ -33,16 +33,8 @@ class AzBlobServiceClient(BlobServiceClient):
         )
         self.storage_container_name = az.storage_container_name
 
-    def get_blob_client(
-        self,
-        blob: str,
-        snapshot: Dict[str, Any] | str | None = None,
-        *,
-        version_id: str | None = None,
-    ) -> BlobClient:
-        return super().get_blob_client(
-            self.storage_container_name, blob, snapshot, version_id=version_id
-        )
+    def get_blob_client(self, blob: str) -> BlobClient:
+        return super().get_blob_client(self.storage_container_name, blob)
 
 
 class Blob(File):
