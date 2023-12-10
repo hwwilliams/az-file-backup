@@ -64,7 +64,7 @@ class CloudAz(BaseModel):
 
 
 class UploadDefinition(BaseModel):
-    health_check_url: str | None
+    health_check_url: str
     paths: List[str]
     cloud: CloudAz
 
