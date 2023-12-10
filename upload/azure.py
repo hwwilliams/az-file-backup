@@ -23,12 +23,7 @@ class AzBlobServiceClient(BlobServiceClient):
     def __init__(
         self,
         az: CloudAzProperties,
-        credential: str
-        | Dict[str, str]
-        | AzureNamedKeyCredential
-        | AzureSasCredential
-        | TokenCredential
-        | None = DefaultAzureCredential(),
+        credential: str = DefaultAzureCredential(),
         **kwargs: Any,
     ) -> None:
         super().__init__(
